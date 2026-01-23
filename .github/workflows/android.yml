@@ -43,6 +43,8 @@ jobs:
       - name: Decode and Save Keystore
         run: |
           # Try to decode the secret keystore
+          USING_SECRET_KEYSTORE="false"
+          
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "Attempting to decode keystore from secret..."
             if echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/keystore.jks 2>/dev/null; then
@@ -50,19 +52,16 @@ jobs:
               if keytool -list -keystore $GITHUB_WORKSPACE/keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}" > /dev/null 2>&1; then
                 echo "✓ Secret keystore is valid"
                 chmod 600 $GITHUB_WORKSPACE/keystore.jks
-                echo "USING_SECRET_KEYSTORE=true" >> $GITHUB_ENV
+                USING_SECRET_KEYSTORE="true"
               else
                 echo "✗ Secret keystore validation failed"
                 rm -f $GITHUB_WORKSPACE/keystore.jks
-                echo "USING_SECRET_KEYSTORE=false" >> $GITHUB_ENV
               fi
             else
               echo "✗ Failed to decode keystore from secret"
-              echo "USING_SECRET_KEYSTORE=false" >> $GITHUB_ENV
             fi
           else
             echo "✗ KEYSTORE_BASE64 secret is not set"
-            echo "USING_SECRET_KEYSTORE=false" >> $GITHUB_ENV
           fi
           
           # Generate temporary keystore if secret keystore is not valid
@@ -74,6 +73,7 @@ jobs:
             fi
             
             echo "Generating temporary debug keystore for CI build..."
+            # Using standard Android debug keystore credentials (temporary/debug-only)
             keytool -genkeypair -v \
               -keystore $GITHUB_WORKSPACE/keystore.jks \
               -keyalg RSA \
@@ -85,7 +85,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
             chmod 600 $GITHUB_WORKSPACE/keystore.jks
             
-            # Set environment variables for temporary keystore
+            # Set environment variables for temporary keystore (debug credentials only)
             echo "KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
             echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
             echo "KEY_PASSWORD=android" >> $GITHUB_ENV
