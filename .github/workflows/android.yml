@@ -44,6 +44,7 @@ jobs:
         run: |
           # Function to generate debug keystore
           generate_debug_keystore() {
+            echo "::warning::Generating DEBUG keystore - DO NOT use for production releases"
             keytool -genkeypair -v -keystore $GITHUB_WORKSPACE/keystore.jks \
               -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass android -keypass android \
