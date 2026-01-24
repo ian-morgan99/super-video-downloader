@@ -42,46 +42,6 @@ jobs:
 
       - name: Decode and Save Keystore
         run: |
-          # Function to generate debug keystore
-          generate_debug_keystore() {
-            echo "::warning::Generating DEBUG keystore - DO NOT use for production releases"
-            keytool -genkeypair -v -keystore $GITHUB_WORKSPACE/keystore.jks \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
-            echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
-            chmod 600 $GITHUB_WORKSPACE/keystore.jks
-          }
-          
-          # Try to decode the keystore from secrets
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/keystore.jks
-            
-            # Validate the keystore
-            if keytool -list -keystore $GITHUB_WORKSPACE/keystore.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}" 2>/dev/null; then
-              echo "Using production keystore from secrets"
-              chmod 600 $GITHUB_WORKSPACE/keystore.jks
-            else
-              echo "::warning::Keystore validation failed, using debug keystore"
-              # For release tags, fail the build
-              if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-                echo "::error::Cannot create release with invalid keystore"
-                exit 1
-              fi
-              # Generate debug keystore for non-release builds
-              generate_debug_keystore
-            fi
-          else
-            echo "::warning::KEYSTORE_BASE64 secret not found, using debug keystore"
-            # For release tags, fail the build
-            if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-              echo "::error::Cannot create release without keystore secret"
-              exit 1
-            fi
-            # Generate debug keystore
-            generate_debug_keystore
           # Try to decode the secret keystore
           USING_SECRET_KEYSTORE="false"
           
