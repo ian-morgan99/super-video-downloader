@@ -42,6 +42,18 @@ jobs:
 
       - name: Decode and Save Keystore
         run: |
+          # Function to generate debug keystore
+          generate_debug_keystore() {
+            keytool -genkeypair -v -keystore $GITHUB_WORKSPACE/keystore.jks \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+            echo "KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+            chmod 600 $GITHUB_WORKSPACE/keystore.jks
+          }
+          
           # Try to decode the keystore from secrets
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/keystore.jks
@@ -58,13 +70,7 @@ jobs:
                 exit 1
               fi
               # Generate debug keystore for non-release builds
-              keytool -genkeypair -v -keystore $GITHUB_WORKSPACE/keystore.jks \
-                -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-                -storepass android -keypass android \
-                -dname "CN=Android Debug,O=Android,C=US"
-              echo "KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
-              echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
-              echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+              generate_debug_keystore
             fi
           else
             echo "::warning::KEYSTORE_BASE64 secret not found, using debug keystore"
@@ -74,15 +80,8 @@ jobs:
               exit 1
             fi
             # Generate debug keystore
-            keytool -genkeypair -v -keystore $GITHUB_WORKSPACE/keystore.jks \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-            echo "KEYSTORE_PASSWORD=android" >> $GITHUB_ENV
-            echo "KEY_ALIAS=androiddebugkey" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+            generate_debug_keystore
           fi
-          chmod 600 $GITHUB_WORKSPACE/keystore.jks
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
